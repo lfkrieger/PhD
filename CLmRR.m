@@ -1,9 +1,15 @@
+    % author lfkrieger
+% adjusted to experimental group CLm13-18
+% start adjustments 04/2020
 
 %% Part1
 %% read-in .csv file
 % from DeepLabCut output
-% coordinates of mouse landmarks
-T = readtable('\\10.152.96.1\home\video\CLm1-10\CLm1\20191102\Run1\CLm1_20191102_CLm1_20191102_Run1DeepCut_resnet50_CLmicenov28shuffle1_1030000.csv');
+% coordinates of mouse landmarks (less than with CLm1-12)
+% 1-3 nose, 5-7 right ear, 8-10 left ear, 11-13 bodymass, 14-16 redLED_OFF,
+% 17-19 blueLED_OFF, 20-22 redLED_ON, 23-25 blueLED_ON
+file ='CLm15_20200301_CLm15_20200301_CLm15_20200301_CLm15_20200301_CLm15_20200301_Run1DeepCut_resnet50_CLmice13-18mar30shuffle1_350000.csv';
+T = readtable(file);
 T = table2array(T(3:end,:));
 
 %% manually define TS identity accoring to order in time
@@ -15,12 +21,12 @@ T = table2array(T(3:end,:));
     % fwbw = 3; bwfw = 4
     % fwfw = -3; bwbw = -4 
 % normally sin5: TSid = [0,1,2,1,2,1,2,1,0];
-TSid = [0,1,2,1,2,1,2,1,0];
+TSid = [0,1,2,1,2,1,2,1,2];
 
 %% find direction TS
 %red LED
-    Tredon = str2double([T(:,31)]);
-    Tredoff = str2double([T(:,25)]);
+    Tredon = str2double([T(:,22)]);
+    Tredoff = str2double([T(:,16)]);
 
     for i = 1:length(Tredon)-1
         l(i) = (Tredon(i+1,1)-Tredon(i,1));    
@@ -28,33 +34,20 @@ TSid = [0,1,2,1,2,1,2,1,0];
     RedOn = find(l>0.95); %frame on %+1 frame
     RedOff = find(l<-0.95); %frame off
 
-    %for i = 1:length(Tredoff)-1
-    %    l(i) = (Tredoff(i+1,1)-Tredoff(i,1));    
-    %end
-    %find(l<-0.95) %frame on
-    %find(l>0.95) %frame off
-
 %blue LED 
-    Tblueon = str2double([T(:,34)]);
-    Tblueoff = str2double([T(:,28)]);
+    Tblueon = str2double([T(:,25)]);
+    Tblueoff = str2double([T(:,19)]);
 
-    %for i = 1:length(Tblueon)-1
-    %    l(i) = (Tblueon(i+1,1)-Tblueon(i,1));    
-    %end
-    %find(l>0.95) %frame on %+1 frame
-    %find(l<-0.95) %frame off
-
-    %this is better
-    for i = 1:length(Tblueoff)-1
-        l(i) = (Tblueoff(i+1,1)-Tblueoff(i,1));    
+    for i = 1:length(Tblueon)-1
+        l(i) = (Tblueon(i+1,1)-Tblueon(i,1));    
     end
-    BlueOn = find(l<-0.95); %frame on %+1 frame
-    BlueOff = find(l>0.95); %frame off
+    BlueOn = find(l>0.95); %frame on %+1 frame
+    BlueOff = find(l<-0.95); %frame off
     clear l
 
 % bodymass xy plot for Run   
-    plot(str2double([T(1:end,17)])), hold on;
-    plot(str2double([T(1:end,18)])), title('body mass'), legend('x coord','y coord'), hold on;
+    plot(str2double([T(1:end,11)])), hold on;
+    plot(str2double([T(1:end,12)])), title('body mass'), legend('x coord','y coord'), hold on;
     vline(RedOn,'r') %redLED TS
     vline(BlueOn,'b') %blueLED TS
 
@@ -65,10 +58,11 @@ TSid = [0,1,2,1,2,1,2,1,0];
     dTS = dTS';
     
 %%
-m7.D20191108.Run6={T,dTS};
-%m6.D20191103.Run6{1,1}=T;
-clear ans BlueOn BlueOff dTS i RedOn RedOff T Tblueon Tblueoff Tredon Tredoff TSid
+T = readtable(file); %because I want the original table be saved 
+m15.D20200229.Run5={T,dTS};
+clear ans BlueOn BlueOff dTS i RedOn RedOff T Tblueon Tblueoff Tredon Tredoff TSid file
 
+% m15.D20200227.Run5{1}=T;  
 
 %% Part2 
 %% post-processing
