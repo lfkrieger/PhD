@@ -8,7 +8,7 @@
 % coordinates of mouse landmarks (less than with CLm1-12)
 % 1-3 nose, 5-7 right ear, 8-10 left ear, 11-13 bodymass, 14-16 redLED_OFF,
 % 17-19 blueLED_OFF, 20-22 redLED_ON, 23-25 blueLED_ON
-file ='CLm15_20200301_CLm15_20200301_CLm15_20200301_CLm15_20200301_CLm15_20200301_Run1DeepCut_resnet50_CLmice13-18mar30shuffle1_350000.csv';
+file ='CLm15_20200220_CLm15_20200220_CLm15_20200220_CLm15_20200220_CLm15_20200220_Run6DeepCut_resnet50_CLmice13-18mar30shuffle1_350000.csv';
 T = readtable(file);
 T = table2array(T(3:end,:));
 
@@ -21,7 +21,7 @@ T = table2array(T(3:end,:));
     % fwbw = 3; bwfw = 4
     % fwfw = -3; bwbw = -4 
 % normally sin5: TSid = [0,1,2,1,2,1,2,1,0];
-TSid = [0,1,2,1,2,1,2,1,2];
+TSid = [0,1,2,1,2,1,4,1,2];
 
 %% find direction TS
 %red LED
@@ -59,7 +59,7 @@ TSid = [0,1,2,1,2,1,2,1,2];
     
 %%
 T = readtable(file); %because I want the original table be saved 
-m15.D20200229.Run5={T,dTS};
+m15.D20200220.Run6={T,dTS};
 clear ans BlueOn BlueOff dTS i RedOn RedOff T Tblueon Tblueoff Tredon Tredoff TSid file
 
 % m15.D20200227.Run5{1}=T;  
