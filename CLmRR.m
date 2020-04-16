@@ -66,26 +66,13 @@ clear ans BlueOn BlueOff dTS i RedOn RedOff T Tblueon Tblueoff Tredon Tredoff TS
 
 %% Part2 
 %% post-processing
-%1.) imregister
+%explanation of data structure:
+%strct containing table
+% to make calculation, convert to double: table2array (tabel to cell),
+% str2double (cell to double)
+% once done, convert back to original strucutre: num2cell(double to cell), then cell2table (cell to table) 
 
-img1 = imread('F:\CLm1-10_videos\CLm6\20191101\Run1\acA1920-25uc__21817890__20191101_142335857_0001.tiff');
-img2 = imread('F:\CLm1-10_videos\CLm6\20191109\Run1\acA1920-25uc__21817890__20191109_134203058_0001.tiff');
-img1 = rgb2gray(img1);
-img2 = rgb2gray(img2);
-imshowpair(img1, img2,'Scaling','joint')
-[optimizer, metric] = imregconfig('multimodal') %or 'monomodal'
-movingRegistered = imregister(img1, img2, 'affine', optimizer, metric);
-[moving_reg,R_reg] = imregister(img1,img2,'affine',optimizer,metric);
-figure
-imshowpair(img1, movingRegistered,'Scaling','joint')
-
-        %explanation of data structure:
-        %strct containing table
-        % to make calculation, convert to double: table2array (tabel to cell),
-        % str2double (cell to double)
-        % once done, convert back to original strucutre: num2cell(double to cell), then cell2table (cell to table) 
-
-%2.) normalize coordinates to zero position = mouse sitting still before
+%1.) normalize coordinates to zero position = mouse sitting still before
 %run onset or in first 150frames
 fns = sort(fieldnames(m15));
 for i = 1:length(fns) % for all days
@@ -104,7 +91,7 @@ for i = 1:length(fns) % for all days
     end
 end
 
-%3.) excluding coord with low estimation-likelihood =NaN
+%2.) excluding coord with low estimation-likelihood =NaN
 % but what cutoff value? 95%
 fns = fieldnames(m6);
 for i = 1:length(fns) % for all days
