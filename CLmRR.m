@@ -1,10 +1,44 @@
+    % author lfkrieger
+% adjusted to experimental group CLm13-18
+% start adjustments 04/2020
 
 %% Part1
 %% read-in .csv file
 % from DeepLabCut output
-% coordinates of mouse landmarks
-T = readtable('\\10.152.96.1\home\video\CLm1-10\CLm1\20191102\Run1\CLm1_20191102_CLm1_20191102_Run1DeepCut_resnet50_CLmicenov28shuffle1_1030000.csv');
+% coordinates of mouse landmarks (less than with CLm1-12)
+% 1-3 nose, 5-7 right ear, 8-10 left ear, 11-13 bodymass, 14-16 redLED_OFF,
+% 17-19 blueLED_OFF, 20-22 redLED_ON, 23-25 blueLED_ON
+file ='CLm17_20200221_CLm17_20200221_CLm17_20200221_CLm17_20200221_CLm17_20200221_Run1DeepCut_resnet50_CLmice13-18mar30shuffle1_350000.csv';
+T = readtable(file);
 T = table2array(T(3:end,:));
+
+%%find direction TS
+%red LED
+    Tredon = str2double([T(:,22)]);
+    Tredoff = str2double([T(:,16)]);
+
+    for i = 1:length(Tredon)-1
+        l(i) = (Tredon(i+1,1)-Tredon(i,1));    
+    end
+    RedOn = find(l>0.95); %frame on %+1 frame
+    RedOff = find(l<-0.95); %frame off
+
+%blue LED 
+    Tblueon = str2double([T(:,25)]);
+    Tblueoff = str2double([T(:,19)]);
+
+    for i = 1:length(Tblueon)-1
+        l(i) = (Tblueon(i+1,1)-Tblueon(i,1));    
+    end
+    BlueOn = find(l>0.95); %frame on %+1 frame
+    BlueOff = find(l<-0.95); %frame off
+    clear l
+
+% bodymass xy plot for Run   
+    plot(str2double([T(1:end,11)])), hold on;
+    plot(str2double([T(1:end,12)])), title('body mass'), legend('x coord','y coord'), hold on;
+    vline(RedOn,'r') %redLED TS
+    vline(BlueOn,'b') %blueLED TS
 
 %% manually define TS identity accoring to order in time
 % 0 = start/stop
@@ -15,48 +49,7 @@ T = table2array(T(3:end,:));
     % fwbw = 3; bwfw = 4
     % fwfw = -3; bwbw = -4 
 % normally sin5: TSid = [0,1,2,1,2,1,2,1,0];
-TSid = [0,1,2,1,2,1,2,1,0];
-
-%% find direction TS
-%red LED
-    Tredon = str2double([T(:,31)]);
-    Tredoff = str2double([T(:,25)]);
-
-    for i = 1:length(Tredon)-1
-        l(i) = (Tredon(i+1,1)-Tredon(i,1));    
-    end
-    RedOn = find(l>0.95); %frame on %+1 frame
-    RedOff = find(l<-0.95); %frame off
-
-    %for i = 1:length(Tredoff)-1
-    %    l(i) = (Tredoff(i+1,1)-Tredoff(i,1));    
-    %end
-    %find(l<-0.95) %frame on
-    %find(l>0.95) %frame off
-
-%blue LED 
-    Tblueon = str2double([T(:,34)]);
-    Tblueoff = str2double([T(:,28)]);
-
-    %for i = 1:length(Tblueon)-1
-    %    l(i) = (Tblueon(i+1,1)-Tblueon(i,1));    
-    %end
-    %find(l>0.95) %frame on %+1 frame
-    %find(l<-0.95) %frame off
-
-    %this is better
-    for i = 1:length(Tblueoff)-1
-        l(i) = (Tblueoff(i+1,1)-Tblueoff(i,1));    
-    end
-    BlueOn = find(l<-0.95); %frame on %+1 frame
-    BlueOff = find(l>0.95); %frame off
-    clear l
-
-% bodymass xy plot for Run   
-    plot(str2double([T(1:end,17)])), hold on;
-    plot(str2double([T(1:end,18)])), title('body mass'), legend('x coord','y coord'), hold on;
-    vline(RedOn,'r') %redLED TS
-    vline(BlueOn,'b') %blueLED TS
+TSid = [0,1,2,1,2,1,2,1,2];
 
 % join red+blue LED TS
     dTS = [RedOn BlueOn];
@@ -65,52 +58,40 @@ TSid = [0,1,2,1,2,1,2,1,0];
     dTS = dTS';
     
 %%
-m7.D20191108.Run6={T,dTS};
-%m6.D20191103.Run6{1,1}=T;
-clear ans BlueOn BlueOff dTS i RedOn RedOff T Tblueon Tblueoff Tredon Tredoff TSid
+T = readtable(file); %because I want the original table be saved 
+m18.D20200301.Run5={T,dTS};
+clear ans BlueOn BlueOff dTS i RedOn RedOff T Tblueon Tblueoff Tredon Tredoff TSid file
 
+% m15.D20200227.Run5{1}=T;  
 
 %% Part2 
 %% post-processing
-%1.) imregister
+%explanation of data structure:
+%strct containing table
+% to make calculation, convert to double: table2array (tabel to cell),
+% str2double (cell to double)
+% once done, convert back to original strucutre: num2cell(double to cell), then cell2table (cell to table) 
 
-img1 = imread('F:\CLm1-10_videos\CLm6\20191101\Run1\acA1920-25uc__21817890__20191101_142335857_0001.tiff');
-img2 = imread('F:\CLm1-10_videos\CLm6\20191109\Run1\acA1920-25uc__21817890__20191109_134203058_0001.tiff');
-img1 = rgb2gray(img1);
-img2 = rgb2gray(img2);
-imshowpair(img1, img2,'Scaling','joint')
-[optimizer, metric] = imregconfig('multimodal') %or 'monomodal'
-movingRegistered = imregister(img1, img2, 'affine', optimizer, metric);
-[moving_reg,R_reg] = imregister(img1,img2,'affine',optimizer,metric);
-figure
-imshowpair(img1, movingRegistered,'Scaling','joint')
-
-        %explanation of data structure:
-        %strct containing table
-        % to make calculation, convert to double: table2array (tabel to cell),
-        % str2double (cell to double)
-        % once done, convert back to original strucutre: num2cell(double to cell), then cell2table (cell to table) 
-
-%2.) normalize coordinates to zero position = mouse sitting still before
+%1.) normalize coordinates to zero position = mouse sitting still before
 %run onset or in first 150frames
-fns = fieldnames(m6);
+fns = sort(fieldnames(m15));
 for i = 1:length(fns) % for all days
-    fns2 = fieldnames(m6.(fns{i}));
-    vec = [2,3,5,6,8,9,11,12,14,15,17,18,20,21,23,24,26,27,29,30,32,33];
+    fns2 = fieldnames(m15.(fns{i}));
+    vec = [2,3,5,6,8,9,11,12,14,15,17,18,20,21,23,24];
     for j = 1:length(fns2) % for all Runs
-        T = table2array(m6.(fns{i}).(fns2{j}){1,1}(1:end,:));
+        T = table2array(m15.(fns{i}).(fns2{j}){1,1}(1:end,:));
         for k = 1:length(vec)% for all x y columns
             %normalize to mean of first 150 frames
             %TS0 = m6.(fns{i}).(fns2{j}){1,2}(1,1); %alternatively all
             %frames before first TS
-            M = mean(str2double(table2array(m6.(fns{i}).(fns2{j}){1,1}(3:152,vec(k)))));
-            T(3:end,vec(k)) = num2cell(str2double(table2array(m6.(fns{i}).(fns2{j}){1,1}(3:end,vec(k))))-M);
+            M = mean(str2double(table2array(m15.(fns{i}).(fns2{j}){1,1}(3:342,vec(k)))));
+            T(3:end,vec(k)) = num2cell(str2double(table2array(m15.(fns{i}).(fns2{j}){1,1}(3:end,vec(k))))-M);
         end
-        m6.(fns{i}).(fns2{j}){1,1}=cell2table(T);
+        m15.(fns{i}).(fns2{j}){1,1}=cell2table(T);
     end
 end
 
-%3.) excluding coord with low estimation-likelihood =NaN
+%2.) excluding coord with low estimation-likelihood =NaN
 % but what cutoff value? 95%
 fns = fieldnames(m6);
 for i = 1:length(fns) % for all days
@@ -141,37 +122,37 @@ l_bwfw =cell(4,2); %{1,1} = bodymass x, {1,2} = bodymass y
 e_fwbw =cell(4,2); %{1,1} = right ear x, {1,2} = right ear y
 e_bwfw =cell(4,2); %{1,1} = right ear x, {1,2} = right ear y
 
-fns = fieldnames(m6);
+fns = fieldnames(m15);
 for i = 1:length(fns) % for all days
-    fns2 = fieldnames(m6.(fns{i}));
+    fns2 = fieldnames(m15.(fns{i}));
     for j = 1:length(fns2) % for all Runs
     % find all TS of certain kind + associated frame number    
         %fwbw w/o laser
-        idx_fw = find(m6.(fns{i}).(fns2{j}){1,2}(:,2) ==1);
-        idx_fw2 = m6.(fns{i}).(fns2{j}){1,2}(idx_fw,1)+3;
+        idx_fw = find(m15.(fns{i}).(fns2{j}){1,2}(:,2) ==1);
+        idx_fw2 = m15.(fns{i}).(fns2{j}){1,2}(idx_fw,1)+3;
         %bwfw w/o laser
-        idx_bw = find(m6.(fns{i}).(fns2{j}){1,2}(:,2) ==2);
-        idx_bw2 = m6.(fns{i}).(fns2{j}){1,2}(idx_bw,1)+3; 
+        idx_bw = find(m15.(fns{i}).(fns2{j}){1,2}(:,2) ==2);
+        idx_bw2 = m15.(fns{i}).(fns2{j}){1,2}(idx_bw,1)+3; 
         %fwbw w/ laser
-        idx_fwL = find(m6.(fns{i}).(fns2{j}){1,2}(:,2) ==3);
-        idx_fwL2 = m6.(fns{i}).(fns2{j}){1,2}(idx_fwL,1)+3;
+        idx_fwL = find(m15.(fns{i}).(fns2{j}){1,2}(:,2) ==3);
+        idx_fwL2 = m15.(fns{i}).(fns2{j}){1,2}(idx_fwL,1)+3;
         %bwfw w/laser
-        idx_bwL = find(m6.(fns{i}).(fns2{j}){1,2}(:,2) ==4);
-        idx_bwL2 = m6.(fns{i}).(fns2{j}){1,2}(idx_bwL,1)+3;
+        idx_bwL = find(m15.(fns{i}).(fns2{j}){1,2}(:,2) ==4);
+        idx_bwL2 = m15.(fns{i}).(fns2{j}){1,2}(idx_bwL,1)+3;
         %fwfw w/o laser
-        idx_fwfw = find(m6.(fns{i}).(fns2{j}){1,2}(:,2) ==-1);
-        idx_fwfw2 = m6.(fns{i}).(fns2{j}){1,2}(idx_fwfw,1)+3;
+        idx_fwfw = find(m15.(fns{i}).(fns2{j}){1,2}(:,2) ==-1);
+        idx_fwfw2 = m15.(fns{i}).(fns2{j}){1,2}(idx_fwfw,1)+3;
         %bwbw w/o laser
-        idx_bwbw = find(m6.(fns{i}).(fns2{j}){1,2}(:,2) ==-2);
-        idx_bwbw2 = m6.(fns{i}).(fns2{j}){1,2}(idx_bwbw,1)+3;
+        idx_bwbw = find(m15.(fns{i}).(fns2{j}){1,2}(:,2) ==-2);
+        idx_bwbw2 = m15.(fns{i}).(fns2{j}){1,2}(idx_bwbw,1)+3;
         %fwfw w/ laser
-        idx_fwfwL = find(m6.(fns{i}).(fns2{j}){1,2}(:,2) ==-3);
-        idx_fwfwL2 = m6.(fns{i}).(fns2{j}){1,2}(idx_fwfwL,1)+3;
+        idx_fwfwL = find(m15.(fns{i}).(fns2{j}){1,2}(:,2) ==-3);
+        idx_fwfwL2 = m15.(fns{i}).(fns2{j}){1,2}(idx_fwfwL,1)+3;
         %bwbw w/ laser
-        idx_bwbwL = find(m6.(fns{i}).(fns2{j}){1,2}(:,2) ==-4);
-        idx_bwbwL2 = m6.(fns{i}).(fns2{j}){1,2}(idx_bwbwL,1)+3;
+        idx_bwbwL = find(m15.(fns{i}).(fns2{j}){1,2}(:,2) ==-4);
+        idx_bwbwL2 = m15.(fns{i}).(fns2{j}){1,2}(idx_bwbwL,1)+3;
     % find tracking coordinates of body mass and right ear around TS
-        T = table2array(m6.(fns{i}).(fns2{j}){1,1}(1:end,:));
+        T = table2array(m15.(fns{i}).(fns2{j}){1,1}(1:end,:));
         %l_fwbw AND e_fwbw
         for k = 1:length(idx_fw2) %normal fwbw x and y coord 
             l_fwbw{1,1}(:,size(l_fwbw{1,1},2)+1)= (T(idx_fw2(k)-40*6:idx_fw2(k)+40*6,17)); % bodymass x
@@ -232,7 +213,7 @@ for i = 1:length(fns) % for all days
         clear k             
     end  
 end
-clearvars -except m6 l_bwfw l_fwbw e_bwfw e_fwbw
+clearvars -except m15 l_bwfw l_fwbw e_bwfw e_fwbw
 
 %% plot landmark coordinates aligned to direction TS
 
@@ -397,103 +378,5 @@ clearvars -except m6 l_bwfw l_fwbw e_bwfw e_fwbw
         ax.XTickLabel = {'-6','-5','-4','-3','-2','-1','0','1','2','3','4','5','6'};
   
         
-%%    
-%OLD: as scatter plot        
-% plot scatter ztransformed coord of repetitions per timepoint 
-    %!must change landmark and fwbw!
-    %fwbw
-    var = l_fwbw_z;
-    var2 = 'fwbw bodymass x';
-    var3 = 'fwbw bodymass y';
-    figure 
-    % landmark x-coordinates
-        subplot(1,2,1) 
-        [rows cols] = size(var{1,1});
-        for i=1:rows
-        scatter(repmat(i,[cols 1]),var{1,1}(i,:), [],[0.75 0.75 0.75])
-        hold on
-        end
-        line([0 rows],[2 2],'Color',[0 0 0])
-        line([0 rows],[-2 -2],'Color',[0 0 0])
-        yl = ylim; 
-        line([rows/2 rows/2],[yl(1) yl(2)],'Color',[0 0 0],'LineStyle','--')
-        % not normalTS 
-        for j=2:4
-            [rows cols] = size(var{j,1});
-            for i=1:rows
-            scatter(repmat(i,[cols 1]),var{j,1}(i,:), [],'r')
-            hold on
-            end
-        end
-        title(var2), ylabel('ztransf x-coord'), xlabel('40 frames/s');
-    % landmark y-coordinates    
-        subplot(1,2,2) 
-        [rows cols] = size(var{1,2});
-        for i=1:rows
-        scatter(repmat(i,[cols 1]),var{1,2}(i,:), [],[0.75 0.75 0.75])
-        hold on
-        end
-        line([0 rows],[2 2],'Color',[0 0 0])
-        line([0 rows],[-2 -2],'Color',[0 0 0])
-        yl = ylim; 
-        line([rows/2 rows/2],[yl(1) yl(2)],'Color',[0 0 0],'LineStyle','--')
-        % not normalTS 
-        for j=2:4
-            [rows cols] = size(var{j,2});
-            for i=1:rows
-            scatter(repmat(i,[cols 1]),var{j,2}(i,:), [],'r')
-            hold on
-            end
-        end
-        title(var3), ylabel('z-transf y-coord'), xlabel('40 frames/s');
-        hold off
 
-    %bwfw
-    var = l_bwfw_z;   
-    var2 = 'bwfw bodymass x';
-    var3 = 'bwfw bodymass y';
-    figure
-    % landmark x-coordinates
-        subplot(1,2,1) 
-        [rows cols] = size(var{1,1});
-        for i=1:rows
-        scatter(repmat(i,[cols 1]),var{1,1}(i,:), [],[0.75 0.75 0.75])
-        hold on
-        end
-        line([0 rows],[2 2],'Color',[0 0 0])
-        line([0 rows],[-2 -2],'Color',[0 0 0])
-        yl = ylim; 
-        line([rows/2 rows/2],[yl(1) yl(2)],'Color',[0 0 0],'LineStyle','--')
-        % not normalTS 
-        for j=2:4
-            [rows cols] = size(var{j,1});
-            for i=1:rows
-            scatter(repmat(i,[cols 1]),var{j,1}(i,:), [],'r')
-            hold on
-            end
-        end
-        title(var2), ylabel('z-transf x-coord'), xlabel('40 frames/s');
-        subplot(1,2,2) 
-        
-        % landmark y-coordinates           
-        [rows cols] = size(var{1,2});
-        for i=1:rows
-        scatter(repmat(i,[cols 1]),var{1,2}(i,:), [],[0.75 0.75 0.75])
-        hold on
-        end
-        line([0 rows],[2 2],'Color',[0 0 0])
-        line([0 rows],[-2 -2],'Color',[0 0 0])
-        yl = ylim; 
-        line([rows/2 rows/2],[yl(1) yl(2)],'Color',[0 0 0],'LineStyle','--')
-        % not normalTS 
-        for j=2:4
-            [rows cols] = size(var{j,2});
-            for i=1:rows
-            scatter(repmat(i,[cols 1]),var{j,2}(i,:), [],'r')
-            hold on
-            end
-        end
-        title(var3), ylabel('z-transf y-coord'), xlabel('40 frames/s');
-        hold off
-        
         
